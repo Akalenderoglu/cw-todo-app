@@ -2,6 +2,7 @@ pipeline{
     agent any
     tools {
         terraform 'terraform'
+        ansible 'ansible'
     }
 
     environment {
@@ -47,8 +48,8 @@ pipeline{
                 }
                 sh 'echo ${DB_HOST}'
                 sh 'echo ${NODE_IP}'
-                sh 'echo ${DB_NAME}'
-                sh 'echo ${DB_PASSWORD}'
+                sh 'echo ${DB_NAME}'  # Create db_name in AWS---> Systems Manager Parameter Store
+                sh 'echo ${DB_PASSWORD}'  # Create db_password in AWS---> Systems Manager Parameter Store
                 sh 'envsubst < node-env-template > ./nodejs/server/.env'
                 sh 'cat ./nodejs/server/.env'
                 sh 'envsubst < react-env-template > ./react/client/.env'
@@ -86,15 +87,15 @@ pipeline{
                 sh 'ls -l'
                 sh 'ansible --version'
                 sh 'ansible-inventory --graph'
-                ansiblePlaybook credentialsId: 'firstkey', disableHostKeyChecking: true, installation: 'ansible', inventory: 'inventory_aws_ec2.yml', playbook: 'docker_project.yml'
+                ansiblePlaybook credentialsId: '<!!!!!Your Key Name!!!!!>', disableHostKeyChecking: true, installation: 'ansible', inventory: 'inventory_aws_ec2.yml', playbook: 'docker_project.yml'
              }
         }
 
         stage('Destroy the infrastructure'){
             steps{
-                timeout(time:5, unit:'DAYS'){
-                    input message:'Approve terminate'
-                }
+                timeout(time:5, unit:'DAYS'){      #If you see the App live, approve it! If you choose to abort, there are many sources you will have to destroy manually!
+                    input message:'Approve terminate'  #If you select anything, the App will stay live for 5 days, then it will automatically destroy itself!!!
+                }                                        
                 sh """
                 docker image prune -af
                 terraform destroy --auto-approve
